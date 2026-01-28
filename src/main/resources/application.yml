@@ -1,0 +1,10 @@
+spring:
+  security:
+    user:
+      name: disabled
+      password: disabled
+
+security:
+  jwt:
+    secret: changeme-super-secret-key
+    expiration-seconds: 3600

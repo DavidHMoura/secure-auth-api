@@ -13,14 +13,34 @@ import org.springframework.stereotype.Service;
 public class UserService {
 
     private final UserRepository repository;
-    private final RoleRepository roleRepository; // ✅ novo
+    private final RoleRepository roleRepository;
     private final PasswordEncoder encoder;
 
     public UserService(UserRepository repository, RoleRepository roleRepository, PasswordEncoder encoder) {
         this.repository = repository;
-        this.roleRepository = roleRepository; // ✅ novo
+        this.roleRepository = roleRepository;
         this.encoder = encoder;
     }
+
+    public void grantRole(String email, String roleName) {
+        User user = repository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        Role role = roleRepository.findByName(roleName)
+                .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+
+        user.getRoles().add(role);
+        repository.save(user);
+    }
+
+    public void revokeRole(String email, String roleName) {
+        User user = repository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        user.getRoles().removeIf(r -> r.getName().equals(roleName));
+        repository.save(user);
+    }
+
 
     public UserResponse create(CreateUserRequest req) {
         if (repository.existsByEmail(req.email())) {

@@ -20,7 +20,6 @@ public class DataSeeder {
             if (!roleRepo.existsByName("ROLE_USER")) roleRepo.save(new Role("ROLE_USER"));
             if (!roleRepo.existsByName("ROLE_ADMIN")) roleRepo.save(new Role("ROLE_ADMIN"));
 
-            // opcional: cria admin inicial
             String adminEmail = "admin@local";
             if (!userRepo.existsByEmail(adminEmail)) {
                 Role userRole = roleRepo.findByName("ROLE_USER").orElseThrow();
