@@ -17,24 +17,50 @@ import java.util.UUID;
 public class TokenService {
 
     private final SecretKey key;
-    private final long expirationSeconds;
+    private final long accessExpSeconds;
+    private final long refreshExpSeconds;
+    private final String issuer;
 
     public TokenService(
             @Value("${security.jwt.secret}") String secret,
-            @Value("${security.jwt.expiration-seconds:3600}") long expirationSeconds
+            @Value("${security.jwt.access-expiration-seconds:900}") long accessExpSeconds,
+            @Value("${security.jwt.refresh-expiration-seconds:604800}") long refreshExpSeconds,
+            @Value("${security.jwt.issuer:secure-auth-api}") String issuer
     ) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.expirationSeconds = expirationSeconds;
+        this.accessExpSeconds = accessExpSeconds;
+        this.refreshExpSeconds = refreshExpSeconds;
+        this.issuer = issuer;
     }
 
-    public String generateToken(UUID userId, String email, Set<String> roles) {
+    public String generateAccessToken(UUID userId, String email, Set<String> roles) {
         Instant now = Instant.now();
-        Instant exp = now.plusSeconds(expirationSeconds);
+        Instant exp = now.plusSeconds(accessExpSeconds);
 
         return Jwts.builder()
+                .header().type("JWT").and()
+                .id(UUID.randomUUID().toString())
+                .issuer(issuer)
                 .subject(userId.toString())
                 .claim("email", email)
-                .claim("roles", roles.stream().toList())
+                .claim("roles", roles)
+                .claim("typ", "access")
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(exp))
+                .signWith(key)
+                .compact();
+    }
+
+    public String generateRefreshToken(UUID userId) {
+        Instant now = Instant.now();
+        Instant exp = now.plusSeconds(refreshExpSeconds);
+
+        return Jwts.builder()
+                .header().type("JWT").and()
+                .id(UUID.randomUUID().toString())
+                .issuer(issuer)
+                .subject(userId.toString())
+                .claim("typ", "refresh")
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(exp))
                 .signWith(key)
