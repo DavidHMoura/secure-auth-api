@@ -1,249 +1,234 @@
 # 🔐 Secure Auth API
 
-Secure authentication and authorization API built with Spring Boot and Spring Security, focused on stateless JWT authentication, role-based access control (RBAC), and production-oriented security design.
+A secure authentication and authorization API built with **Spring Boot** and **Spring Security**, focused on **stateless JWT authentication**, **role-based access control (RBAC)**, and **production-oriented security design**.
 
-#### |- This project is designed as a reference backend authentication service, demonstrating real-world security patterns, clean architecture, and explicit design decisions.
+> This project is designed as a **reference backend authentication service**, demonstrating real-world security patterns, clean architecture, and explicit design decisions — not tutorial shortcuts.
+
+---
 
 ## 🚧 Project Status
 
 ### Active / Stable (v0.1.0)
-Core authentication and authorization features are implemented and validated.
-Further improvements focus on observability, testing, and hardening.
+
+Core authentication and authorization features are implemented and validated.  
+Upcoming work focuses on **security testing, observability, and infrastructure hardening**.
+
+---
 
 ## 🎯 Project Goals
 
-• Provide stateless authentication using JWT
+- Provide stateless authentication using JWT
+- Implement database-backed RBAC (USER / ADMIN)
+- Demonstrate secure token lifecycle management
+- Serve as a **portfolio-grade backend security project**
+- Reflect **real-world Spring Security usage**, not simplified demos
 
-• Implement database-backed RBAC (USER / ADMIN)
-
-• Demonstrate secure token lifecycle management
-
-• Serve as a portfolio-grade backend security project
-
-• Reflect real-world Spring Security usage, not tutorial shortcuts
+---
 
 ## ✨ Features
 
 ### ✅ Implemented
 
-• Stateless JWT authentication
+- Stateless JWT authentication
+- Secure password hashing with **BCrypt**
+- Role-based access control (USER / ADMIN)
+- Database-backed roles (User ↔ Role many-to-many)
+- JWT propagation of roles via claims
+- Refresh token with **rotation**
+- Refresh token persistence with **SHA-256 hashing**
+- Automatic refresh token revocation on reuse
+- Unique token generation using JWT `jti`
+- Admin-protected endpoints using `@PreAuthorize`
+- Custom JWT authentication filter
+- Structured JSON responses for:
+    - `401 Unauthorized`
+    - `403 Forbidden`
+- Clean separation between:
+    - Authentication
+    - Authorization
+    - Business logic
+- In-memory database (H2) for local development
+- Dedicated **test security configuration** to avoid JWT interference in tests
 
-• Secure password hashing with BCrypt
-
-• Role-based access control (USER / ADMIN)
-
-• Database-backed roles (User ↔ Role many-to-many)
-
-• JWT propagation of roles via claims
-
-• Refresh token with rotation
-
-• Refresh token persistence with hashing (SHA-256)
-
-• Automatic refresh token revocation on reuse
-
-• Unique token generation via JWT jti
-
-• Admin-protected endpoints using @PreAuthorize
-
-• Custom JWT authentication filter
-
-• JSON responses for:
-
-|- 401 Unauthorized
-
-|- 403 Forbidden
-
-• Clean separation between authentication, authorization, and business logic
-
-• In-memory database (H2) for local development
+---
 
 ### 🔜 Planned
 
-• Automated security tests (authorization & token lifecycle)
+- Automated security tests (authorization & token lifecycle)
+- Audit logs for authentication and authorization events
+- Rate limiting / brute-force protection
+- CI pipeline (GitHub Actions)
+- Dockerized environment
+- PostgreSQL profile for production-like setup
 
-• Audit logs for authentication and authorization events
-
-• Rate limiting / brute-force protection
-
-• CI pipeline (GitHub Actions)
-
-• Dockerized environment
-
-• PostgreSQL profile for production-like setup
+---
 
 ## 🧱 Tech Stack
 
-• Java 17+
+- Java 17+
+- Spring Boot
+- Spring Security
+- JWT (JJWT)
+- JPA / Hibernate
+- H2 Database (development)
+- Maven
 
-• Spring Boot
+---
 
-• Spring Security
+## 🗂️ Project Structure
 
-• JWT (JJWT)
+secure-auth-api/
+├── src/main/java/com/davidmoura/secureauth
+│ ├── config/ # application & database seeders
+│ ├── controller/ # REST controllers
+│ ├── domain/ # JPA entities (User, Role, RefreshToken)
+│ ├── dto/ # request / response DTOs
+│ ├── repository/ # data access layer
+│ ├── security/ # JWT, filters, handlers, security config
+│ ├── service/ # business logic
+│ └── SecureAuthApiApplication.java
+│
+├── src/main/resources
+│ ├── application.yml
+│ └── application-test.yml
+│
+├── src/test/java/com/davidmoura/secureauth
+│ └── config/ # test-only security overrides
+│
+├── pom.xml
+└── README.md
 
-• JPA / Hibernate
 
-• H2 Database (dev)
-
-• Maven
-
-# 🗂️ Project Structure
-    secure-auth-api/
-    ├── src/main/java/com/davidmoura/secureauth
-    │   ├── config/        # application & database seeders
-    │   ├── controller/    # REST controllers
-    │   ├── domain/        # JPA entities (User, Role, RefreshToken)
-    │   ├── dto/           # request / response DTOs
-    │   ├── repository/    # data access layer
-    │   ├── security/      # JWT, filters, handlers, security config
-    │   ├── service/       # business logic
-    │   └── SecureAuthApiApplication.java
-    ├── src/main/resources
-    │   ├── application.properties
-    │   └── application.yml
-    ├── pom.xml
-    └── README.md
+---
 
 ## 🚀 Getting Started (Local)
+
 ### 1️⃣ Configure environment
 
-Set JWT configuration in [ application.yml ] or [ application.properties ] :
+Set JWT configuration in `application.yml` or `application.properties`:
 
-    security.jwt.secret=change-this-secret-to-a-long-random-value
-    security.jwt.access-expiration-seconds=900
-    security.jwt.refresh-expiration-seconds=604800
+```properties
+security.jwt.secret=change-this-secret-to-a-long-random-value
+security.jwt.access-expiration-seconds=900
+security.jwt.refresh-expiration-seconds=604800
 
-    spring.jpa.open-in-view=false
+spring.jpa.open-in-view=false
+2️⃣ Run the application
+./mvnw clean spring-boot:run
+🔐 Authentication Flow
+Register user
 
-### 2️⃣ Run the application
-    ./mvnw clean spring-boot:run
+Login
 
-## 🔐 Authentication Flow
+Returns accessToken + refreshToken
 
-### 1. Register user
+Access protected endpoints
 
-### 2.  Login
+Send: Authorization: Bearer <accessToken>
 
-• Returns accessToken + refreshToken
+Refresh access token
 
-### 3. Access protected endpoints
+Endpoint: /api/v1/auth/refresh
 
-• Send Authorization: Bearer <accessToken>
+Old refresh token is revoked (rotation)
 
-### 4. Refresh access token
+Logout
 
-• Use [/api/v1/auth/refresh]
+Refresh token is revoked
 
-• Old refresh token is revoked (rotation)
-
-### 5. Logout
-
-• Refresh token is revoked
-
-## 🔐 Security Design Decisions
-
+🔐 Security Design Decisions
 This project explicitly documents its security decisions to demonstrate engineering reasoning, not just implementation.
 
-### Stateless Authentication
-
+Stateless Authentication
 JWT is used instead of server-side sessions.
 
-### Why:
+Why:
 
-• Horizontal scalability
+Horizontal scalability
 
-• No server-side session storage
+No server-side session storage
 
-• Clear separation between authentication and application state
+Clear separation between authentication and application state
 
-## Database-backed RBAC
-
+Database-backed RBAC
 Roles are stored in the database and associated via a many-to-many relationship.
 
-### Why:
+Why:
 
-• Avoids hardcoded roles
+Avoids hardcoded roles
 
-• Enables dynamic role assignment
+Enables dynamic role assignment
 
-• Reflects real-world authorization models
+Reflects real-world authorization models
 
-### Refresh Token Rotation
+Refresh Token Rotation
+Refresh tokens are:
 
-### Refresh tokens are:
+Persisted in the database
 
-• Persisted in the database
+Stored as hashes
 
-• Stored as hashes
+Revoked after use
 
-• Revoked after use
+Reissued with a new token on refresh
 
-• Reissued with a new token on refresh
+Why:
 
-### Why:
+Prevents token replay attacks
 
-• Prevents token replay attacks
+Enables explicit session invalidation
 
-• Enables explicit session invalidation
+Aligns with production-grade auth systems
 
-• Aligns with production-grade auth systems
+Explicit Token Uniqueness
+All tokens include a unique jti claim.
 
-### Explicit Token Uniqueness
+Why:
 
-All tokens include a unique [jti] claim.
+Prevents deterministic token generation
 
-### Why:
+Ensures safe refresh rotation
 
-• Prevents deterministic token generation
+Improves traceability and audit potential
 
-• Ensures safe refresh rotation
-
-• Improves traceability and audit potential
-
-### Method-level Authorization
-
+Method-level Authorization
 Authorization is enforced via @PreAuthorize.
 
-### Why:
+Why:
 
-• Keeps rules close to business logic
+Keeps rules close to business logic
 
-• Improves readability and maintainability
+Improves readability and maintainability
 
-• Allows fine-grained access control
+Allows fine-grained access control
 
-### JSON-only Security Errors
+JSON-only Security Errors
+Authentication and authorization failures return structured JSON responses.
 
-Authentication and authorization failures return structured JSON.
+Why:
 
-### Why:
+API-first behavior
 
-• API-first behavior
+No redirects or HTML responses
 
-• No redirects or HTML responses
+Easier integration with frontends and clients
 
-• Easier integration with clients and frontends
+🧪 Example Endpoints
+POST /api/v1/auth/login
 
-## 🧪 Example Endpoints
+POST /api/v1/auth/refresh
 
-    • POST /api/v1/auth/login
+POST /api/v1/auth/logout
 
-    • POST /api/v1/auth/refresh
+GET /api/v1/admin/ping (ADMIN only)
 
-    • POST /api/v1/auth/logout
-
-    • GET /api/v1/admin/ping (ADMIN only)
-
-## 👤 Author
-
-### David Moura
+👤 Author
+David Moura
 Software Engineering • Backend Development • Application Security
 
-### Focus areas:
+Focus areas:
 Java • Spring • Security • Backend Architecture • Linux
 
-## 🧠 Final Notes
-
+🧠 Final Notes
 This project is not intended to be a full IAM solution.
 Its goal is to demonstrate secure backend design, clean structure, and explicit security decisions in a realistic Spring Boot application.
