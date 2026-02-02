@@ -2,12 +2,14 @@ package com.davidmoura.secureauth.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile; // <- add
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+@Profile("!test") // <- add (não carrega no profile test)
 @Configuration
 public class SecurityConfig {
 
@@ -32,8 +34,8 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .requestCache(cache -> cache.disable())
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(entryPoint)   // ✅ 401 em JSON
-                        .accessDeniedHandler(deniedHandler)      // ✅ 403 em JSON
+                        .authenticationEntryPoint(entryPoint)
+                        .accessDeniedHandler(deniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/health", "/internal/health").permitAll()

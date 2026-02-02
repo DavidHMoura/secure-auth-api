@@ -1,9 +1,3 @@
-spring:
-  security:
-    user:
-      name: disabled
-      password: disabled
-
 security:
   jwt:
     secret: changeme-super-secret-key
