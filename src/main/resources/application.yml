@@ -1,4 +1,30 @@
 security:
   jwt:
-    secret: changeme-super-secret-key
-    expiration-seconds: 3600
+    secret: ${JWT_SECRET:change-me-super-secret-key-change-me-super-secret-key}
+    access-expiration-seconds: ${JWT_ACCESS_EXPIRATION_SECONDS:900}
+    refresh-expiration-seconds: ${JWT_REFRESH_EXPIRATION_SECONDS:604800}
+    issuer: ${JWT_ISSUER:secure-auth-api}
+
+spring:
+  security:
+    user:
+      name: disabled
+      password: disabled
+
+  datasource:
+    url: jdbc:h2:mem:secureauth;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: false
+
+logging:
+  level:
+    root: INFO
