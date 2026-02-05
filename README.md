@@ -105,7 +105,7 @@ secure-auth-api/
 
 ### 1️⃣ Configure environment
 
-Set JWT configuration in `application.yml` or `application.properties`:
+Set JWT configuration in `application.yml`:
 
 ```properties
 security.jwt.secret=change-this-secret-to-a-long-random-value
