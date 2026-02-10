@@ -1,6 +1,6 @@
 security:
   jwt:
-    secret: ${JWT_SECRET:change-me-super-secret-key-change-me-super-secret-key}
+    secret: ${JWT_SECRET}
     access-expiration-seconds: ${JWT_ACCESS_EXPIRATION_SECONDS:900}
     refresh-expiration-seconds: ${JWT_REFRESH_EXPIRATION_SECONDS:604800}
     issuer: ${JWT_ISSUER:secure-auth-api}
