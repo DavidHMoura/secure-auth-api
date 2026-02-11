@@ -1,0 +1,2 @@
+INSERT INTO roles (id, name) VALUES (RANDOM_UUID(), 'ROLE_USER');
+INSERT INTO roles (id, name) VALUES (RANDOM_UUID(), 'ROLE_ADMIN');
