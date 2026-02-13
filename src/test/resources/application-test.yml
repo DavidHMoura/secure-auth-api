@@ -1,9 +1,9 @@
 security:
   jwt:
-    secret: ${JWT_SECRET:dev-test-secret-change-me-please-dev-test-secret-change-me-please}
-    access-expiration-seconds: ${JWT_ACCESS_EXPIRATION_SECONDS:900}
-    refresh-expiration-seconds: ${JWT_REFRESH_EXPIRATION_SECONDS:604800}
-    issuer: ${JWT_ISSUER:secure-auth-api}
+    secret: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    access-expiration-seconds: 900
+    refresh-expiration-seconds: 604800
+    issuer: secure-auth-api-test
 
 spring:
   datasource:
@@ -16,7 +16,6 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: none
-    defer-datasource-initialization: true
     properties:
       hibernate:
         format_sql: false
@@ -27,8 +26,8 @@ spring:
       schema-locations: classpath:schema.sql
       data-locations: classpath:data.sql
 
-  main:
-    banner-mode: "off"
+  flyway:
+    enabled: false
 
 logging:
   level:

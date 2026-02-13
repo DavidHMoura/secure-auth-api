@@ -6,19 +6,31 @@ security:
     issuer: ${JWT_ISSUER:secure-auth-api}
 
 spring:
+  application:
+    name: secure-auth-api
+
   datasource:
-    url: jdbc:h2:mem:secureauth;MODE=PostgreSQL
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: ${DB_DRIVER:org.postgresql.Driver}
 
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
         format_sql: false
+
+  sql:
+    init:
+      mode: never
+
+  flyway:
+    enabled: ${FLYWAY_ENABLED:false}
+    locations: ${FLYWAY_LOCATIONS:classpath:db/migration}
+    baseline-on-migrate: true
 
 logging:
   level:
