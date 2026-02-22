@@ -8,10 +8,9 @@ A secure authentication and authorization API built with **Spring Boot** and **S
 
 ## 🚧 Project Status
 
-### Active / Stable (v0.1.0)
+### Active / Stable (v0.2.0)
 
-Core authentication and authorization features are implemented and validated.  
-Upcoming work focuses on **security testing, observability, and infrastructure hardening**.
+Core authentication, authorization, infrastructure, and observability features are fully implemented.
 
 ---
 
@@ -29,6 +28,7 @@ Upcoming work focuses on **security testing, observability, and infrastructure h
 
 ### ✅ Implemented
 
+**Authentication & Authorization**
 - Stateless JWT authentication
 - Secure password hashing with **BCrypt**
 - Role-based access control (USER / ADMIN)
@@ -37,198 +37,234 @@ Upcoming work focuses on **security testing, observability, and infrastructure h
 - Refresh token with **rotation**
 - Refresh token persistence with **SHA-256 hashing**
 - Automatic refresh token revocation on reuse
+- **Token reuse detection** — revokes all user sessions on suspicious refresh attempt
 - Unique token generation using JWT `jti`
 - Admin-protected endpoints using `@PreAuthorize`
 - Custom JWT authentication filter
-- Structured JSON responses for:
-    - `401 Unauthorized`
-    - `403 Forbidden`
-- Clean separation between:
-    - Authentication
-    - Authorization
-    - Business logic
-- In-memory database (H2) for local development
-- Dedicated **test security configuration** to avoid JWT interference in tests
 
----
+**Security Hardening**
+- Rate limiting on `/login` — **10 requests/minute per IP** (Bucket4j)
+- Structured JSON responses for `401 Unauthorized` and `403 Forbidden`
+- `429 Too Many Requests` with `Retry-After` header on rate limit breach
 
-### 🔜 Planned
+**Audit Logging**
+- Async audit trail for: `LOGIN_SUCCESS`, `LOGIN_FAILURE`, `LOGOUT`, `TOKEN_REFRESHED`, `TOKEN_REUSE_DETECTED`, `USER_REGISTERED`, `ROLE_GRANTED`, `ROLE_REVOKED`
+- IP address captured per event (supports `X-Forwarded-For` proxy headers)
+- Events published via Spring's `ApplicationEventPublisher` (decoupled from business logic)
 
-- Automated security tests (authorization & token lifecycle)
-- Audit logs for authentication and authorization events
-- Rate limiting / brute-force protection
-- CI pipeline (GitHub Actions)
-- Dockerized environment
-- PostgreSQL profile for production-like setup
+**Infrastructure**
+- Flyway migrations for schema versioning
+- PostgreSQL for production, H2 in-memory for tests
+- Docker multi-stage build (non-root user, layer-optimized)
+- Docker Compose for local development (app + PostgreSQL with healthchecks)
+- Automated refresh token cleanup (scheduled daily at 03:00)
+
+**Testing & CI**
+- Integration tests with `@SpringBootTest` and H2 in-memory
+- Full auth flow test: register → login → access → refresh → logout
+- Token reuse detection test
+- Admin authorization tests with `@WithMockUser`
+- GitHub Actions CI: build, test, OWASP dependency scan, Docker build
 
 ---
 
 ## 🧱 Tech Stack
 
-- Java 17+
-- Spring Boot
-- Spring Security
-- JWT (JJWT)
-- JPA / Hibernate
-- H2 Database (development)
-- Maven
+| Layer | Technology |
+|---|---|
+| Language | Java 17 |
+| Framework | Spring Boot 3.5 |
+| Security | Spring Security 6 |
+| JWT | JJWT 0.12.6 |
+| Rate Limiting | Bucket4j 8.x (in-memory) |
+| Persistence | JPA / Hibernate + Flyway |
+| Database (dev/test) | H2 in-memory |
+| Database (production) | PostgreSQL 16 |
+| Build | Maven |
+| Container | Docker (multi-stage, eclipse-temurin:17-alpine) |
+| API Docs | SpringDoc OpenAPI / Swagger UI |
+| CI | GitHub Actions |
 
 ---
 
 ## 🗂️ Project Structure
 
+```
 secure-auth-api/
-├── src/main/java/com/davidmoura/secureauth
-│ ├── config/ # application & database seeders
-│ ├── controller/ # REST controllers
-│ ├── domain/ # JPA entities (User, Role, RefreshToken)
-│ ├── dto/ # request / response DTOs
-│ ├── repository/ # data access layer
-│ ├── security/ # JWT, filters, handlers, security config
-│ ├── service/ # business logic
-│ └── SecureAuthApiApplication.java
-│
-├── src/main/resources
-│ ├── application.yml
-│ └── application-test.yml
-│
-├── src/test/java/com/davidmoura/secureauth
-│ └── config/ # test-only security overrides
-│
+├── .github/
+│   └── workflows/
+│       └── ci.yml                  # CI pipeline
+├── src/
+│   ├── main/
+│   │   ├── java/com/davidmoura/secureauth/
+│   │   │   ├── config/             # AsyncConfig, DataSeeder, OpenApiConfig, PasswordConfig
+│   │   │   ├── controller/         # AuthController, AdminController, UserController, MeController, HealthController
+│   │   │   ├── domain/             # User, Role, RefreshToken, AuditEvent, AuditEventType
+│   │   │   ├── dto/                # Request/Response records
+│   │   │   ├── exception/          # ApiError, GlobalExceptionHandler
+│   │   │   ├── repository/         # UserRepository, RoleRepository, RefreshTokenRepository, AuditEventRepository
+│   │   │   ├── security/           # JWT filter, TokenService, SecurityConfig, rate limiting, handlers
+│   │   │   ├── service/            # AuthService, UserService, AuditService, TokenCleanupService
+│   │   │   └── SecureAuthApiApplication.java
+│   │   └── resources/
+│   │       ├── db/migration/       # V1__init.sql, V2__create_refresh_tokens.sql, V3__create_audit_log.sql
+│   │       ├── application.yml
+│   │       ├── application-dev.yml
+│   │       └── application-prod.yml
+│   └── test/
+│       ├── java/com/davidmoura/secureauth/
+│       │   ├── api/                # AuthControllerIT, AdminAuthorizationIT
+│       │   ├── config/             # TestSecurityConfig
+│       │   └── AuthFlowIT.java
+│       └── resources/
+│           └── application-test.yml
+├── Dockerfile
+├── docker-compose.yml
 ├── pom.xml
 └── README.md
-
+```
 
 ---
 
-## 🚀 Getting Started (Local)
+## 🚀 Getting Started
 
-### 1️⃣ Configure environment
+### Option A — Docker Compose (recommended)
 
-Set JWT configuration in `application.yml`:
+```bash
+# 1. Clone the repository
+git clone https://github.com/DavidHMoura/secure-auth-api.git
+cd secure-auth-api
 
-```properties
-security.jwt.secret=change-this-secret-to-a-long-random-value
-security.jwt.access-expiration-seconds=900
-security.jwt.refresh-expiration-seconds=604800
+# 2. Configure environment variables
+cp .env.example .env
+# Edit .env and set JWT_SECRET (min. 64 chars)
 
-spring.jpa.open-in-view=false
-2️⃣ Run the application
-./mvnw clean spring-boot:run
-🔐 Authentication Flow
-Register user
+# 3. Start the stack (PostgreSQL + app)
+docker compose up --build
 
-Login
+# App available at http://localhost:8080
+# Swagger UI at  http://localhost:8080/swagger-ui.html
+```
 
-Returns accessToken + refreshToken
+### Option B — Local (Maven + external PostgreSQL)
 
-Access protected endpoints
+```bash
+# 1. Set environment variables
+export SPRING_PROFILES_ACTIVE=dev
+export JWT_SECRET=your-secret-with-at-least-64-characters-here
+export DB_URL=jdbc:postgresql://localhost:5432/secureauth
+export DB_USERNAME=postgres
+export DB_PASSWORD=postgres
 
-Send: Authorization: Bearer <accessToken>
+# 2. Run the application
+./mvnw spring-boot:run
+```
 
-Refresh access token
+### Running tests
 
-Endpoint: /api/v1/auth/refresh
+```bash
+./mvnw test
+```
 
-Old refresh token is revoked (rotation)
+---
 
-Logout
+## 🔐 Authentication Flow
 
-Refresh token is revoked
+```
+1. POST /api/v1/users          → Register (public)
+2. POST /api/v1/auth/login     → Returns accessToken + refreshToken
+3. GET  /api/v1/me             → Authenticated endpoint (Bearer token)
+4. POST /api/v1/auth/refresh   → New access + refresh token (old revoked)
+5. POST /api/v1/auth/logout    → Refresh token revoked
+```
 
-🔐 Security Design Decisions
-This project explicitly documents its security decisions to demonstrate engineering reasoning, not just implementation.
+---
 
-Stateless Authentication
+## 📡 API Endpoints
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/v1/users` | Public | Register user |
+| `POST` | `/api/v1/auth/login` | Public | Login (rate limited) |
+| `POST` | `/api/v1/auth/refresh` | Public | Refresh tokens |
+| `POST` | `/api/v1/auth/logout` | Public | Logout |
+| `GET` | `/api/v1/me` | Bearer | Current user info |
+| `GET` | `/api/v1/admin/ping` | ADMIN | Admin health check |
+| `POST` | `/api/v1/admin/grant` | ADMIN | Grant role to user |
+| `POST` | `/api/v1/admin/revoke` | ADMIN | Revoke role from user |
+| `GET` | `/health` | Public | Application health |
+
+---
+
+## 🔐 Security Design Decisions
+
+### Stateless Authentication
 JWT is used instead of server-side sessions.
 
-Why:
+**Why:** Horizontal scalability without shared session state. Clear separation between authentication and application state.
 
-Horizontal scalability
-
-No server-side session storage
-
-Clear separation between authentication and application state
-
-Database-backed RBAC
+### Database-backed RBAC
 Roles are stored in the database and associated via a many-to-many relationship.
 
-Why:
+**Why:** Avoids hardcoded roles. Enables dynamic role assignment at runtime.
 
-Avoids hardcoded roles
+### Refresh Token Rotation
+Refresh tokens are persisted as SHA-256 hashes, revoked after use, and reissued with every refresh.
 
-Enables dynamic role assignment
+**Why:** Prevents replay attacks. Enables explicit session invalidation. The old token is immediately invalidated — any reuse is detectable.
 
-Reflects real-world authorization models
+### Token Reuse Detection
+When a revoked refresh token is presented, **all active sessions for that user are immediately revoked**.
 
-Refresh Token Rotation
-Refresh tokens are:
+**Why:** Token reuse strongly suggests theft (e.g., the attacker has the original token and is trying to refresh after the legitimate user already did). Revoking all sessions forces a full re-authentication, limiting the attack window.
 
-Persisted in the database
+### Rate Limiting on Login
+The `/api/v1/auth/login` endpoint is limited to **10 requests per minute per IP** using Bucket4j (in-memory, greedy refill).
 
-Stored as hashes
+**Why:** Mitigates brute-force and credential stuffing attacks without requiring external infrastructure (Redis). For multi-instance deployments, migrate to `bucket4j-redis`.
 
-Revoked after use
+### Async Audit Logging
+Authentication and authorization events are published via Spring's `ApplicationEventPublisher` and persisted asynchronously.
 
-Reissued with a new token on refresh
+**Why:** Decouples audit concerns from business logic. A failure in audit persistence does not fail the auth request. Logged data (event type, user ID, IP, timestamp) supports incident response and compliance.
 
-Why:
+### Explicit Token Uniqueness (`jti`)
+All tokens include a unique `jti` (JWT ID) claim.
 
-Prevents token replay attacks
+**Why:** Prevents deterministic token generation. Ensures safe refresh rotation and improves traceability in audit logs.
 
-Enables explicit session invalidation
+### Method-level Authorization (`@PreAuthorize`)
+Authorization is enforced at the method level, not only at the filter chain.
 
-Aligns with production-grade auth systems
+**Why:** Keeps rules close to business logic. Allows fine-grained, per-method access control that survives routing refactors.
 
-Explicit Token Uniqueness
-All tokens include a unique jti claim.
+### JSON-only Security Errors
+All authentication and authorization failures return structured JSON (no redirects, no HTML).
 
-Why:
+**Why:** API-first behavior. Easy to parse by frontend clients and monitoring systems.
 
-Prevents deterministic token generation
+---
 
-Ensures safe refresh rotation
+## 🧪 Test Coverage
 
-Improves traceability and audit potential
+| Test | What it validates |
+|---|---|
+| `AuthFlowIT` | Full flow: register → login → access protected → admin denied → refresh rotation → reuse detection → logout |
+| `AuthControllerIT` | Invalid credentials return 401 |
+| `AdminAuthorizationIT` | ADMIN role accesses admin endpoint; USER role is denied with 403 |
 
-Method-level Authorization
-Authorization is enforced via @PreAuthorize.
+---
 
-Why:
+## 👤 Author
 
-Keeps rules close to business logic
+**David Moura**  
+Software Engineering · Backend Development · Application Security
 
-Improves readability and maintainability
+Focus areas: Java · Spring · Security · Backend Architecture · Linux
 
-Allows fine-grained access control
+---
 
-JSON-only Security Errors
-Authentication and authorization failures return structured JSON responses.
+## 🧠 Final Notes
 
-Why:
-
-API-first behavior
-
-No redirects or HTML responses
-
-Easier integration with frontends and clients
-
-🧪 Example Endpoints
-POST /api/v1/auth/login
-
-POST /api/v1/auth/refresh
-
-POST /api/v1/auth/logout
-
-GET /api/v1/admin/ping (ADMIN only)
-
-👤 Author
-David Moura
-Software Engineering • Backend Development • Application Security
-
-Focus areas:
-Java • Spring • Security • Backend Architecture • Linux
-
-🧠 Final Notes
-This project is not intended to be a full IAM solution.
-Its goal is to demonstrate secure backend design, clean structure, and explicit security decisions in a realistic Spring Boot application.
+This project is not intended to be a full IAM solution.  
+Its goal is to demonstrate **secure backend design**, **clean architecture**, and **explicit engineering decisions** in a realistic Spring Boot application — with real infrastructure, real security patterns, and production-grade code quality.

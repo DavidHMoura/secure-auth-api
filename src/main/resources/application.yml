@@ -9,12 +9,6 @@ spring:
   application:
     name: secure-auth-api
 
-  datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-    driver-class-name: ${DB_DRIVER:org.postgresql.Driver}
-
   jpa:
     open-in-view: false
     hibernate:
@@ -28,9 +22,7 @@ spring:
       mode: never
 
   flyway:
-    enabled: ${FLYWAY_ENABLED:false}
-    locations: ${FLYWAY_LOCATIONS:classpath:db/migration}
-    baseline-on-migrate: true
+    enabled: true
 
 logging:
   level:

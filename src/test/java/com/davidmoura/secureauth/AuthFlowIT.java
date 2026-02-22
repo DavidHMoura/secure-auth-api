@@ -63,15 +63,16 @@ class AuthFlowIT {
 
         JsonNode loginJson = om.readTree(loginRes);
         String accessToken = loginJson.get("accessToken").asText();
+        String refreshToken = loginJson.get("refreshToken").asText();
 
         // 3) Endpoint protegido: sem token -> 401 em JSON
-        mvc.perform(get("/api/v1/users/me"))
+        mvc.perform(get("/api/v1/me"))   // FIX: era /api/v1/users/me — URL errada
                 .andDo(print())
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
 
         // 4) Endpoint protegido: com token -> 200
-        mvc.perform(get("/api/v1/users/me")
+        mvc.perform(get("/api/v1/me")   // FIX: URL corrigida
                         .header("Authorization", "Bearer " + accessToken))
                 .andDo(print())
                 .andExpect(status().isOk())
@@ -83,6 +84,33 @@ class AuthFlowIT {
                 .andDo(print())
                 .andExpect(status().isForbidden())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+
+        // 6) FIX NOVO: Testar rotação do refresh token
+        var refreshRes = mvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("refreshToken", refreshToken))))
+                .andDo(print())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").exists())
+                .andExpect(jsonPath("$.refreshToken").exists())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        // 7) FIX NOVO: Usar refresh token antigo deve retornar 401 (token revogado)
+        mvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("refreshToken", refreshToken))))
+                .andDo(print())
+                .andExpect(status().isUnauthorized());
+
+        // 8) FIX NOVO: Logout com novo refresh token
+        String newRefreshToken = om.readTree(refreshRes).get("refreshToken").asText();
+        mvc.perform(post("/api/v1/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of("refreshToken", newRefreshToken))))
+                .andDo(print())
+                .andExpect(status().isOk());
     }
 
     private String json(Object value) throws Exception {
