@@ -1,5 +1,11 @@
 # 🔐 Secure Auth API
 
+## ⚠️ ARCHITECTURE PIVOT NOTICE (ADR-001)
+**Date:** 2026-03-07
+**Decision:** The core engine architecture has been officially pivoted from Java 21 to Rust.
+**Reasoning:** To maximize memory safety guarantees, eliminate garbage collection latency in high-throughput event processing, and drastically reduce the deployment attack surface by utilizing statically linked binaries.
+**Status:** This Java repository is archived as a V0 prototype. Active development continues in the Rust codebase.
+
 A secure authentication and authorization API built with **Spring Boot** and **Spring Security**, focused on **stateless JWT authentication**, **role-based access control (RBAC)**, and **production-oriented security design**.
 
 > This project is designed as a **reference backend authentication service**, demonstrating real-world security patterns, clean architecture, and explicit design decisions — not tutorial shortcuts.
