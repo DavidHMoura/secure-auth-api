@@ -1,5 +1,3 @@
-okay. mas ajuste todo o README. ou me manda o arquivo pronto para eu copiar e colar. como deve ficar la no formato mesmo.
-
 # Secure Auth API
 
 
