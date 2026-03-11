@@ -1,25 +1,37 @@
 package com.davidmoura.secureauth.controller;
 
+import com.davidmoura.secureauth.dto.CreateUserRequest;
+import com.davidmoura.secureauth.dto.ForgotPasswordRequest;
 import com.davidmoura.secureauth.dto.LoginRequest;
 import com.davidmoura.secureauth.dto.LoginResponse;
 import com.davidmoura.secureauth.dto.RefreshRequest;
 import com.davidmoura.secureauth.dto.RefreshResponse;
+import com.davidmoura.secureauth.dto.ResetPasswordRequest;
+import com.davidmoura.secureauth.dto.UserResponse;
 import com.davidmoura.secureauth.service.AuthService;
+import com.davidmoura.secureauth.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.davidmoura.secureauth.dto.ForgotPasswordRequest;
-import com.davidmoura.secureauth.dto.ResetPasswordRequest;
 
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
     private final AuthService authService;
+    private final UserService userService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, UserService userService) {
         this.authService = authService;
+        this.userService = userService;
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<UserResponse> register(@Valid @RequestBody CreateUserRequest req) {
+        UserResponse response = userService.create(req);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/login")
@@ -46,7 +58,6 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest req, HttpServletRequest http) {
         authService.forgotPassword(req.email(), resolveIp(http));
-        // Mensagem genérica para prevenir enumeração
         return ResponseEntity.ok("If that email address is in our database, we will send you an email to reset your password.");
     }
 
