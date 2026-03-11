@@ -9,6 +9,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.davidmoura.secureauth.dto.ForgotPasswordRequest;
+import com.davidmoura.secureauth.dto.ResetPasswordRequest;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -39,6 +41,19 @@ public class AuthController {
     @PostMapping("/logout")
     public void logout(@Valid @RequestBody RefreshRequest req, HttpServletRequest http) {
         authService.logout(req, resolveIp(http));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest req, HttpServletRequest http) {
+        authService.forgotPassword(req.email(), resolveIp(http));
+        // Mensagem genérica para prevenir enumeração
+        return ResponseEntity.ok("If that email address is in our database, we will send you an email to reset your password.");
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest req, HttpServletRequest http) {
+        authService.resetPassword(req.token(), req.newPassword(), resolveIp(http));
+        return ResponseEntity.ok("Password has been successfully reset. You can now log in.");
     }
 
     private String resolveIp(HttpServletRequest request) {

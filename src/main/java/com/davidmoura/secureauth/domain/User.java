@@ -33,6 +33,12 @@ public class User {
     @Column(nullable = false)
     private Instant createdAt = Instant.now();
 
+    @Column(name = "reset_token", length = 64)
+    private String resetToken;
+
+    @Column(name = "reset_token_expires_at")
+    private Instant resetTokenExpiresAt;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_roles",
@@ -59,9 +65,25 @@ public class User {
     public String getVerificationToken() { return verificationToken; }
     public Instant getCreatedAt() { return createdAt; }
     public Set<Role> getRoles() { return roles; }
+    public String getResetToken() { return resetToken; }
+    public Instant getResetTokenExpiresAt() { return resetTokenExpiresAt; }
 
     public void verify() {
         this.verified = true;
         this.verificationToken = null;
+    }
+
+    public void createPasswordResetToken() {
+        this.resetToken = java.util.UUID.randomUUID().toString();
+        this.resetTokenExpiresAt = Instant.now().plusSeconds(900); // 15 minutos
+    }
+
+    public void clearPasswordResetToken() {
+        this.resetToken = null;
+        this.resetTokenExpiresAt = null;
+    }
+
+    public void updatePassword(String newPasswordHash) {
+        this.passwordHash = newPasswordHash;
     }
 }

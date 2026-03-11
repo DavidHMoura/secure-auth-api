@@ -21,4 +21,17 @@ public class EmailService {
         log.info("Link: {}", link);
         log.info("======================================================\n");
     }
+
+    @Async
+    public void sendPasswordResetEmail(String to, String token) {
+        String link = "http://localhost:8080/api/v1/auth/reset-password?token=" + token;
+
+        log.info("\n======================================================");
+        log.info("MOCK EMAIL SENDER - PASSWORD RESET");
+        log.info("To: {}", to);
+        log.info("Subject: Password Reset Request");
+        log.info("Link: {}", link);
+        log.info("Note: This link expires in 15 minutes.");
+        log.info("======================================================\n");
+    }
 }

@@ -27,3 +27,5 @@ spring:
 logging:
   level:
     root: INFO
+  logging.level.org.springframework.web=DEBUG
+  logging.level.com.davidmoura=DEBUG

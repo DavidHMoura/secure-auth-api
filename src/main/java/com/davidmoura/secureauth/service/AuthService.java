@@ -37,20 +37,61 @@ public class AuthService {
     private final PasswordEncoder encoder;
     private final TokenService tokenService;
     private final ApplicationEventPublisher events;
+    private final EmailService emailService; // 🔹 Adicionado
 
     public AuthService(
             UserRepository users,
             RefreshTokenRepository refreshTokens,
             PasswordEncoder encoder,
             TokenService tokenService,
-            ApplicationEventPublisher events
+            ApplicationEventPublisher events,
+            EmailService emailService // 🔹 Adicionado
     ) {
         this.users = users;
         this.refreshTokens = refreshTokens;
         this.encoder = encoder;
         this.tokenService = tokenService;
         this.events = events;
+        this.emailService = emailService;
     }
+
+    // ─── RECUPERAÇÃO DE SENHA (APPSEC) ───────────────────────────────────────
+
+    @Transactional
+    public void forgotPassword(String email, String ipAddress) {
+        users.findByEmail(email).ifPresent(user -> {
+            user.createPasswordResetToken();
+            users.save(user);
+            emailService.sendPasswordResetEmail(user.getEmail(), user.getResetToken());
+
+            publish(AuditEventType.PASSWORD_RESET_REQUESTED, user.getId(), ipAddress, "Password reset email sent");
+        });
+        // IMPORTANTE: Se o usuário não existir, passamos reto e não retornamos erro.
+        // Isso impede ataques de enumeração de e-mail.
+    }
+
+    @Transactional
+    public void resetPassword(String token, String newPassword, String ipAddress) {
+        User user = users.findByResetToken(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired reset token"));
+
+        if (user.getResetTokenExpiresAt().isBefore(Instant.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reset token has expired");
+        }
+
+        // Atualiza o hash da senha e invalida o token para não ser reusado
+        user.updatePassword(encoder.encode(newPassword));
+        user.clearPasswordResetToken();
+        users.save(user);
+
+        publish(AuditEventType.PASSWORD_RESET_COMPLETED, user.getId(), ipAddress, "Password successfully reset");
+
+        // Medida de segurança agressiva: derruba todas as sessões ativas (Refresh Tokens)
+        // Isso garante que, se a conta foi comprometida, o atacante perde o acesso na hora.
+        revokeAllUserTokens(user.getId());
+    }
+
+    // ─── FLUXO NORMAL DE AUTENTICAÇÃO ────────────────────────────────────────
 
     @Transactional
     public LoginResponse login(LoginRequest req, String ipAddress) {
