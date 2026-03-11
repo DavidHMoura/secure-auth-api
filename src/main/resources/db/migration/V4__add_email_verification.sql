@@ -1,0 +1,4 @@
+ALTER TABLE users ADD COLUMN verified BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN verification_token VARCHAR(64);
+
+UPDATE users SET verified = TRUE;

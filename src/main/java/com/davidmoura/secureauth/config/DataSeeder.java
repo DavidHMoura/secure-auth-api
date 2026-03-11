@@ -27,8 +27,10 @@ public class DataSeeder {
                 Role userRole = roleRepo.findByName("ROLE_USER").orElseThrow();
                 Role adminRole = roleRepo.findByName("ROLE_ADMIN").orElseThrow();
 
-                User admin = new User("Admin", adminEmail, encoder.encode("admin123"));
+                User admin = new User("Admin", adminEmail, encoder.encode("admin123"), null);
+                admin.verify();
                 admin.getRoles().addAll(Set.of(userRole, adminRole));
+                userRepo.save(admin);
 
                 userRepo.save(admin);
             }

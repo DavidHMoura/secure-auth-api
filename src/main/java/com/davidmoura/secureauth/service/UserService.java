@@ -8,6 +8,7 @@ import com.davidmoura.secureauth.repository.RoleRepository;
 import com.davidmoura.secureauth.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserService {
@@ -15,13 +16,16 @@ public class UserService {
     private final UserRepository repository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder encoder;
+    private final EmailService emailService;
 
-    public UserService(UserRepository repository, RoleRepository roleRepository, PasswordEncoder encoder) {
+    public UserService(UserRepository repository, RoleRepository roleRepository, PasswordEncoder encoder, EmailService emailService) {
         this.repository = repository;
         this.roleRepository = roleRepository;
         this.encoder = encoder;
+        this.emailService = emailService;
     }
 
+    @Transactional
     public void grantRole(String email, String roleName) {
         User user = repository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -33,6 +37,7 @@ public class UserService {
         repository.save(user);
     }
 
+    @Transactional
     public void revokeRole(String email, String roleName) {
         User user = repository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -41,15 +46,16 @@ public class UserService {
         repository.save(user);
     }
 
-
+    @Transactional
     public UserResponse create(CreateUserRequest req) {
         if (repository.existsByEmail(req.email())) {
             throw new IllegalArgumentException("Email already registered");
         }
 
         String hash = encoder.encode(req.password());
+        String verificationToken = java.util.UUID.randomUUID().toString();
 
-        User user = new User(req.name(), req.email(), hash);
+        User user = new User(req.name(), req.email(), hash, verificationToken);
 
         Role userRole = roleRepository.findByName("ROLE_USER")
                 .orElseThrow(() -> new IllegalStateException("ROLE_USER not seeded"));
@@ -57,6 +63,7 @@ public class UserService {
 
         repository.save(user);
 
+        emailService.sendVerificationEmail(user.getEmail(), verificationToken);
 
         return new UserResponse(
                 user.getId(),

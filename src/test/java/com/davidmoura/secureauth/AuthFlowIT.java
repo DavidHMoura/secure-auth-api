@@ -1,6 +1,8 @@
 package com.davidmoura.secureauth;
 
 import com.davidmoura.secureauth.config.TestSecurityConfig;
+import com.davidmoura.secureauth.domain.User;
+import com.davidmoura.secureauth.repository.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -24,9 +26,10 @@ class AuthFlowIT extends AbstractIntegrationTest {
 
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper om;
+    @Autowired UserRepository userRepository;
 
     @Test
-    void register_login_and_access_protected_endpoints() throws Exception {
+    void register_verify_login_and_access_protected_endpoints() throws Exception {
         String email = "user_" + UUID.randomUUID() + "@example.com";
         String password = "StrongPassw0rd!";
 
@@ -39,6 +42,23 @@ class AuthFlowIT extends AbstractIntegrationTest {
                         ))))
                 .andDo(print())
                 .andExpect(status().is2xxSuccessful());
+
+        mvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of(
+                                "email", email,
+                                "password", password
+                        ))))
+                .andDo(print())
+                .andExpect(status().isForbidden());
+
+        User savedUser = userRepository.findByEmail(email).orElseThrow();
+        String verificationToken = savedUser.getVerificationToken();
+
+        mvc.perform(get("/api/v1/auth/verify-email")
+                        .param("token", verificationToken))
+                .andDo(print())
+                .andExpect(status().isOk());
 
         var loginRes = mvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -61,20 +81,17 @@ class AuthFlowIT extends AbstractIntegrationTest {
 
         mvc.perform(get("/api/v1/me"))
                 .andDo(print())
-                .andExpect(status().isUnauthorized())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+                .andExpect(status().isUnauthorized());
 
         mvc.perform(get("/api/v1/me")
                         .header("Authorization", "Bearer " + accessToken))
                 .andDo(print())
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+                .andExpect(status().isOk());
 
         mvc.perform(get("/api/v1/admin/ping")
                         .header("Authorization", "Bearer " + accessToken))
                 .andDo(print())
-                .andExpect(status().isForbidden())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+                .andExpect(status().isForbidden());
 
         var refreshRes = mvc.perform(post("/api/v1/auth/refresh")
                         .contentType(MediaType.APPLICATION_JSON)

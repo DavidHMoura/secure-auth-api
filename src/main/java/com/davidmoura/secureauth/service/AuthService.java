@@ -13,6 +13,8 @@ import com.davidmoura.secureauth.repository.UserRepository;
 import com.davidmoura.secureauth.security.TokenHash;
 import com.davidmoura.secureauth.security.TokenService;
 import io.jsonwebtoken.Claims;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,6 +29,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private final UserRepository users;
     private final RefreshTokenRepository refreshTokens;
@@ -53,10 +57,14 @@ public class AuthService {
         User user = users.findByEmail(req.email()).orElse(null);
 
         if (user == null || !encoder.matches(req.password(), user.getPasswordHash())) {
-            // Auditoria de falha — userId nulo quando usuário não existe
             UUID userId = user != null ? user.getId() : null;
             publish(AuditEventType.LOGIN_FAILURE, userId, ipAddress, "email=" + req.email());
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
+        }
+
+        if (!user.isVerified()) {
+            publish(AuditEventType.LOGIN_FAILURE, user.getId(), ipAddress, "reason=unverified_email");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Email not verified. Please check your inbox.");
         }
 
         Set<String> roles = user.getRoles().stream()
@@ -76,6 +84,17 @@ public class AuthService {
     }
 
     @Transactional
+    public void verifyEmail(String token) {
+        User user = users.findByVerificationToken(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired verification token"));
+
+        user.verify();
+        users.save(user);
+
+        log.info("Email verified successfully for user: {}", user.getEmail());
+    }
+
+    @Transactional
     public RefreshResponse refresh(RefreshRequest req, String ipAddress) {
         Claims claims = tokenService.parseClaims(req.refreshToken());
 
@@ -90,7 +109,6 @@ public class AuthService {
         RefreshToken stored = refreshTokens.findByTokenHash(hash)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token"));
 
-        // Detecção de reuso: se o token já foi revogado, alerta e revoga todos os do usuário
         if (stored.isRevoked()) {
             revokeAllUserTokens(userId);
             publish(AuditEventType.TOKEN_REUSE_DETECTED, userId, ipAddress, "Possible token theft — all sessions revoked");
@@ -101,7 +119,6 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
         }
 
-        // Rotation: revoga o token atual e emite um novo
         stored.revoke();
         refreshTokens.save(stored);
 
@@ -142,11 +159,8 @@ public class AuthService {
             publish(AuditEventType.LOGOUT, userId, ipAddress, null);
 
         } catch (Exception ignored) {
-            // Token inválido — nada a revogar
         }
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private void revokeAllUserTokens(UUID userId) {
         refreshTokens.findAllByUserId(userId).forEach(rt -> {

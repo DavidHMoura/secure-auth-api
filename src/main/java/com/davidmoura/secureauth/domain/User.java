@@ -25,9 +25,14 @@ public class User {
     private String passwordHash;
 
     @Column(nullable = false)
+    private boolean verified = false;
+
+    @Column(name = "verification_token", length = 64)
+    private String verificationToken;
+
+    @Column(nullable = false)
     private Instant createdAt = Instant.now();
 
-    // 🔹 NOVO: roles do usuário (RBAC)
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_roles",
@@ -38,21 +43,25 @@ public class User {
 
     protected User() { }
 
-    public User(String name, String email, String passwordHash) {
+    public User(String name, String email, String passwordHash, String verificationToken) {
         this.name = name;
         this.email = email;
         this.passwordHash = passwordHash;
+        this.verificationToken = verificationToken;
+        this.verified = false;
     }
 
-    // getters
     public UUID getId() { return id; }
     public String getName() { return name; }
     public String getEmail() { return email; }
     public String getPasswordHash() { return passwordHash; }
+    public boolean isVerified() { return verified; }
+    public String getVerificationToken() { return verificationToken; }
     public Instant getCreatedAt() { return createdAt; }
+    public Set<Role> getRoles() { return roles; }
 
-    // 🔹 NOVO: usado pelo Security / Services
-    public Set<Role> getRoles() {
-        return roles;
+    public void verify() {
+        this.verified = true;
+        this.verificationToken = null;
     }
 }

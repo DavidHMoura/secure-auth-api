@@ -7,6 +7,7 @@ import com.davidmoura.secureauth.dto.RefreshResponse;
 import com.davidmoura.secureauth.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,6 +23,12 @@ public class AuthController {
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest req, HttpServletRequest http) {
         return authService.login(req, resolveIp(http));
+    }
+
+    @GetMapping("/verify-email")
+    public ResponseEntity<String> verifyEmail(@RequestParam String token) {
+        authService.verifyEmail(token);
+        return ResponseEntity.ok("Email successfully verified. You can now log in.");
     }
 
     @PostMapping("/refresh")
